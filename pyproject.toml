@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "game-loc-kit"
+version = "0.1.0"
+description = "多引擎游戏汉化工作流：提取、用途审核、AI 子 Agent 翻译队列、显示层注入、质检门禁与发布"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+godot = ["pycryptodome>=3.18"]
+unity = ["UnityPy>=1.10"]
+all = ["pycryptodome>=3.18", "UnityPy>=1.10"]
+
+[project.scripts]
+glk = "gamelockit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gamelockit*"]
+
+[tool.setuptools.package-data]
+gamelockit = ["templates/*", "adapters/*/runtime/*"]
+
+[tool.ruff]
+line-length = 160
+
+[tool.ruff.lint.per-file-ignores]
+# argparse 子命令定义按一行一个子命令紧凑书写。
+"gamelockit/cli.py" = ["E702"]
+"tests/*.py" = ["E702"]

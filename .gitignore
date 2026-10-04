@@ -1,0 +1,30 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- 仅本地使用的 AI 配置 ----
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+.omc/
+.claude/
+.until-done/
+
+# ---- 汉化工作区与游戏内容（含原文/译文/截图/存档，绝不入库） ----
+/work/
+/workspaces/
+*.sqlite3
+*.glkws/
+glk.json
