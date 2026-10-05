@@ -30,7 +30,7 @@ tests/            单元测试（pytest）；e2e_real.py 与 pseudo_translate.py
 |---|---|
 | `detect(game_dir) -> 0..100` | 识别置信度；只读文件头/目录，不解包大文件 |
 | `display_layer` | True 表示显示时替换（Godot/Unity），允许 `dual` 用途 |
-| `legacy_codepage` | 引擎按系统代码页解码日文；非日文系统自动转区（目前仅吉里吉里） |
+| `legacy_codepage` | 这款游戏按系统代码页解码日文（可按游戏判断，如吉里吉里检测无 BOM 的 Shift-JIS 脚本、Wolf 检测非 UTF-8 数据）；非日文系统自动转区 |
 | `token_patterns` | 必须原样保留的引擎标记正则（变量、控制符、标签） |
 | `personal_data_globs` | 原版清单中排除的存档/日志，避免玩家游玩导致误报 |
 | `translator_notes` | 写入翻译规约的引擎特有说明 |
@@ -45,6 +45,7 @@ tests/            单元测试（pytest）；e2e_real.py 与 pseudo_translate.py
 ## 已知引擎约束
 
 - Wolf 3.x 用标题字符串核对存档归属，标题不能翻译。UTF-8 版直接启动即可显示简体中文并自动回退缺字。
+- 是否转区按游戏而定，不按引擎：光盘版等只能在日文环境运行的本体用 `init --locale ja` 或 `launch.locale = "ja"` 显式声明；`auto` 只能识别代码页乱码和启动秒退两种情况。
 - Locale Emulator 的 `-run` 读取目标程序自己的转区配置，没有配置时只弹出设置窗口；必须用 `-runas <GUID>`（取 LEConfig.xml 中不需要管理员权限的 ja-JP 配置）。找不到时报错，不退回直接启动。
 - Godot 显示层替换要覆盖拼接文本、自绘文本、渲染时插入颜色标签的句子，以及用全角空格/全角冒号分隔的片段。
 - Godot 可能把 `custom_user_dir_name` 指向与其他游戏共用的目录，存档保护按实际配置取路径。

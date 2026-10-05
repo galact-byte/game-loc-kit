@@ -75,7 +75,7 @@ def system_is_japanese():
 
 def start(exe, options=None, settle=8, legacy_codepage=False):
     """按配置启动，返回 (Session 或 None, 说明 dict)。
-    auto：legacy_codepage（引擎按系统代码页读日文，如吉里吉里）且系统非日文时直接转区；
+    auto：legacy_codepage（这款游戏按系统代码页读日文，如 Shift-JIS 脚本的吉里吉里）且系统非日文时直接转区；
     否则先直接启动，settle 秒内退出再转区重试。"""
     options = options or {}
     mode = options.get('locale', 'auto')

@@ -10,7 +10,7 @@
 |---|---|---|
 | RPG Maker MV / MZ | `www/data/` 或 `data/` 里有 `System.json` | 直接替换数据文本 |
 | TyranoScript | `data/scenario/*.ks`，或打包的 `app.asar` / `package.nw` | 替换剧本文本 |
-| 吉里吉里（KiriKiri / KAG） | `.xp3` 包里有剧本 | 生成补丁包，需转区启动 |
+| 吉里吉里（KiriKiri / KAG） | `.xp3` 包里有剧本 | 生成补丁包 |
 | Wolf RPG Editor | `Data.wolf`、`Data/*.wolf` 或解开的 `Data/BasicData/` | 替换数据文本 |
 | Unity | 有 `UnityPlayer.dll` 和 `*_Data/` 目录 | 通过 BepInEx + XUnity 在显示时替换 |
 | Godot 4 | 有 `.pck` 或资源打包在 EXE 里 | 在显示时替换，游戏内部原文不变 |
@@ -19,7 +19,7 @@
 
 - Windows 10/11，Python 3.10 以上
 - 安装：在本目录运行 `pip install -e .[all]`
-- 需要转区的游戏（如吉里吉里）：安装 [Locale Emulator](https://github.com/xupefei/Locale-Emulator)，并把 `LEProc.exe` 加入 PATH，或设置环境变量 `GLK_LOCALE_EMULATOR` 指向它
+- 需要转区的游戏（光盘版/镜像里的日文原版本体、按 Shift-JIS 存剧本的老游戏等）：安装 [Locale Emulator](https://github.com/xupefei/Locale-Emulator)，并把 `LEProc.exe` 加入 PATH，或设置环境变量 `GLK_LOCALE_EMULATOR` 指向它
 - Wolf 加密包：需要 UberWolfCli.exe（加入 PATH 或设置 `GLK_UBERWOLF`）
 - Unity：游戏目录已装好 BepInEx + XUnity.AutoTranslator，或在配置中指定一份
 - 翻译：默认调用本机的 `pi` 命令行启动翻译子 Agent
@@ -52,7 +52,13 @@ glk --ws E:/loc/某游戏 release --build E:/loc/某游戏/build/中文版 --out
 
 ## 常见问题
 
-**直接打开中文版是乱码？** 这类引擎按系统语言解码日文，需要转区。`glk shots` 会自动判断并通过 Locale Emulator 启动；发布给玩家时请在说明里提示用转区方式启动。
+**哪些游戏要转区？** 跟引擎无关，看这款游戏本身：
+
+- 从光盘版 ISO 等渠道拿到的日文原版本体，常常只能在日文环境下启动。建工作区时加 `--locale ja`（或在 `glk.json` 设 `launch.locale` 为 `ja`），之后截图检查都会通过 Locale Emulator 启动。
+- 剧本按 Shift-JIS 存储的游戏（如部分吉里吉里作品），直接打开会乱码；`glk` 会检测到并自动转区。
+- 直接启动后几秒内退出的，`glk` 会自动改用转区重试。
+
+需要转区的游戏，发布给玩家时请在说明里提示用转区方式启动。
 
 **Wolf 3.x 的游戏标题为什么没翻？** 该引擎用标题核对存档归属，改了标题旧存档会读不出来，所以标题保持原样。
 

@@ -52,3 +52,25 @@ def test_pipeline_gate_and_build(tmp_path, capsys):
     assert '\\\\C[2]你好' in (out / 'www/data/Map001.json').read_text(encoding='utf-8')
     assert not (out / 'www/save/file1.rpgsave').exists()  # 玩家存档不进副本
     assert json.loads((game / 'www/data/Actors.json').read_text(encoding='utf-8'))[1]['profile'] == '旅人です'
+
+
+def test_init_locale_option_written(tmp_path, capsys):
+    """光盘镜像等生肉本体需要日文环境，与引擎无关：init 时可直接声明转区启动。"""
+    game, ws = tmp_path / 'game', tmp_path / 'ws'
+    _game(game)
+    _run(capsys, '--ws', str(ws), 'init', str(game), '--locale', 'ja')
+    assert json.loads((ws / 'glk.json').read_text(encoding='utf-8'))['launch']['locale'] == 'ja'
+
+
+def test_kirikiri_codepage_detected_per_game(tmp_path):
+    """吉里吉里本身不要求转区；只有脚本按系统代码页（无 BOM 的 Shift-JIS）存储时才需要。"""
+    from gamelockit.adapters.kirikiri import KirikiriAdapter
+    from gamelockit.formats import xp3
+    from gamelockit.project import Workspace
+    results = {}
+    for label, raw in (('unicode', b'\xff\xfe' + 'テスト\n'.encode('utf-16le')), ('sjis', 'テスト\n'.encode('cp932'))):
+        game = tmp_path / label
+        game.mkdir()
+        xp3.write(game / 'data.xp3', {'startup.tjs': b'\xff\xfe' + 'var a=1;'.encode('utf-16le'), 'scenario/first.ks': raw})
+        results[label] = KirikiriAdapter(Workspace.create(tmp_path / f'ws-{label}', game, 'kirikiri')).legacy_codepage
+    assert results == {'unicode': False, 'sjis': True}

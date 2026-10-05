@@ -33,6 +33,17 @@ def decode(raw):
         return raw.decode('cp932')
 
 
+def needs_codepage(raw):
+    """无 BOM 且不是合法 UTF-8 的非 ASCII 脚本，引擎会按系统代码页解读。"""
+    if raw[:2] in (b'\xff\xfe', b'\xfe\xff') or raw[:3] == b'\xef\xbb\xbf' or raw.isascii():
+        return False
+    try:
+        raw.decode('utf-8')
+    except UnicodeDecodeError:
+        return True
+    return False
+
+
 def encode(text):
     # 吉里吉里 2/Z 都识别带 BOM 的 UTF-16LE，且不依赖系统区域代码页
     return b'\xff\xfe' + text.encode('utf-16le')
@@ -50,7 +61,6 @@ class KirikiriAdapter(Adapter):
     name = 'kirikiri'
     title = '吉里吉里 2 / KAG3 / 吉里吉里Z（未加密 XP3）'
     display_layer = False
-    legacy_codepage = True
     token_patterns = (r'\[[^\]\n]*\]', tjs.ESCAPE)
     personal_data_globs = ('savedata/*', '*.log', '*.cf', '*.cfu')
     translator_notes = ('- 方括号标签（[r] [l] [p] [np] [emb exp=…] [ruby text=…] 等）原样保留，可按中文语序移动但不得增删或修改。\n'
@@ -73,6 +83,15 @@ class KirikiriAdapter(Adapter):
         root = Path(root) if root else self.game
         return sorted((p for p in root.glob('*.xp3')), key=_patch_order)
 
+    @property
+    def legacy_codepage(self):
+        # 只有脚本按系统代码页（通常 Shift-JIS）存储时才需要转区；Unicode 脚本在中文系统也能正常显示。
+        if self._codepage is None:
+            self._codepage = any(needs_codepage(raw) for raw in self._raw_scripts().values())
+        return self._codepage
+
+    _codepage = None
+
     def scripts(self):
         """合并后的脚本 {键: (归档或目录, 条目名, 文本)}；后挂载的补丁按同名覆盖。"""
         merged, owner = {}, {}
@@ -91,6 +110,15 @@ class KirikiriAdapter(Adapter):
                 owner.setdefault(key, name)
                 merged[key] = (arc.name, name, raw)
         return {k: (src, name, decode(raw)) for k, (src, name, raw) in merged.items()}
+
+    def _raw_scripts(self):
+        out = {}
+        loose = self.game / 'data'
+        if loose.is_dir():
+            out.update({p.as_posix(): p.read_bytes() for p in loose.rglob('*') if p.suffix.lower() in SCRIPT_EXT})
+        for arc in self.archives():
+            out.update({f'{arc.name}>{n}': raw for n, raw in xp3.read(arc, lambda n: n.lower().endswith(SCRIPT_EXT)).items()})
+        return out
 
     @staticmethod
     def _key(name):

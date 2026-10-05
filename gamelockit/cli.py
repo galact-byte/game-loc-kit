@@ -58,6 +58,9 @@ def cmd_init(args):
             raise SystemExit('无法识别引擎，请用 --engine 指定')
         engine = found[0][1]
     ws = Workspace.create(args.ws, args.game, engine, source_lang=args.source_lang)
+    if args.locale:
+        ws.config['launch']['locale'] = args.locale
+        ws.save()
     adapter = get(engine)(ws)
     count = integrity.record(ws.game_dir, ws.path('original-manifest.json'), exclude=adapter.personal_data_globs)
     render_instructions(ws, adapter)
@@ -241,7 +244,9 @@ def main(argv=None):
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('detect', help='识别游戏引擎'); s.add_argument('game'); s.set_defaults(fn=cmd_detect)
     s = sub.add_parser('init', help='创建工作区并记录原版清单')
-    s.add_argument('game'); s.add_argument('--engine'); s.add_argument('--source-lang', default='ja'); s.set_defaults(fn=cmd_init)
+    s.add_argument('game'); s.add_argument('--engine'); s.add_argument('--source-lang', default='ja')
+    s.add_argument('--locale', choices=['auto', 'ja', 'none'], help='启动方式：ja=总是转区（光盘版等只能在日文环境运行的游戏）')
+    s.set_defaults(fn=cmd_init)
     s = sub.add_parser('extract', help='解包并提取候选文字'); s.set_defaults(fn=cmd_extract)
     s = sub.add_parser('audit', help='用途审核：导出待审批次 / 应用审核结论')
     s.add_argument('action', choices=['export', 'apply']); s.add_argument('file', nargs='?'); s.add_argument('--size', type=int, default=300); s.set_defaults(fn=cmd_audit)

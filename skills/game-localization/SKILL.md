@@ -21,10 +21,10 @@ description: Use when localizing a PC game into Simplified Chinese with game-loc
 ### 1. 识别与建工作区
 ```
 glk detect <游戏目录>
-glk --ws <工作区> init <游戏目录> [--source-lang ja]
+glk --ws <工作区> init <游戏目录> [--source-lang ja] [--locale ja]
 glk --ws <工作区> extract
 ```
-工作区放仓库外。`extract` 输出各用途数量；`pending` 条目必须经过审核。
+工作区放仓库外。光盘版/ISO 里的日文原版本体等只能在日文环境运行的游戏，`init` 时加 `--locale ja`；拿不准就先直接启动原版看是否报错、乱码或秒退。`extract` 输出各用途数量；`pending` 条目必须经过审核。
 
 ### 2. 用途审核
 `glk --ws <工作区> audit export` 生成批次与规约（`audit/AUDIT_INSTRUCTIONS.md`）。逐条查看出处，必要时打开解包文件确认字符串被谁读取：显示函数 → `display`；参与 `==`/字典键/路径/去重 → 显示层引擎可判 `dual`，否则 `protected`。写 `[{id, usage, reason}]` 后 `audit apply`。理由必须引用出处。
@@ -47,7 +47,7 @@ glk --ws <工作区> build --out <副本目录>
 ```
 glk --ws <工作区> shots --build <副本目录> --step wait:10 --step shot:标题 [--step key:enter ...] [--allow 允许原文.json]
 ```
-- 需要转区的引擎（`legacy_codepage`）自动用 Locale Emulator `-runas` 启动；找不到 LEProc 直接报错，不退回直接启动。
+- 声明了 `--locale ja`、或检测到按系统代码页存文字（`legacy_codepage`）的游戏，自动用 Locale Emulator `-runas` 启动；找不到 LEProc 直接报错，不退回直接启动。
 - 截图前后自动备份并还原共享存档位置。
 - 使用截图前核对时间戳/哈希，避免误用旧图；结论要基于 OCR 与亲眼看图，不凭记忆。
 - 残留扫描要覆盖纯汉字的日文词，不只搜假名。
@@ -66,7 +66,7 @@ glk --ws <工作区> release --build <副本目录> --out <发布目录> [--titl
 |---|---|
 | Godot 4 | 显示层替换；资源可能加密并嵌在 EXE；覆盖拼接文本、自绘文本、渲染时加颜色标签/超链接的句子与全角分隔片段 |
 | Unity | 显示层替换（BepInEx + XUnity）；静态扫描资源（默认开启），并可导入 XUnity 运行时捕获的文本 |
-| 吉里吉里 | 必须转区；补丁包方式写入 |
+| 吉里吉里 | 补丁包方式写入；Shift-JIS 剧本会自动判定需转区 |
 | Wolf 3.x | 标题不能改（存档核对用）；UTF-8 版无需转区 |
 | RPG Maker / Tyrano | 直接替换数据；注意插件参数与脚本里的匹配用字符串 |
 
@@ -76,6 +76,6 @@ glk --ws <工作区> release --build <副本目录> --out <发布目录> [--titl
 |---|---|
 | 看到日文就翻 | 破坏条件判断/存档匹配 |
 | 用 `LEProc -run` | 无程序配置时只弹设置窗口，游戏不启动 |
-| 直接启动日文吉里吉里看到乱码就当编码问题修 | 应转区启动 |
+| 直接启动日文原版看到乱码/报错就当编码问题修 | 先确认是否需要转区（`--locale ja`） |
 | 只翻静态标签 | 动态拼接与自绘文字漏翻 |
 | 在原版目录上测试 | 污染原版与玩家存档 |

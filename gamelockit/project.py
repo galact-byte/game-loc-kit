@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
         'transient_markers': ['rate_limit', 'rate limit', 'too many requests', 'concurrency_limit', 'upstream_error', 'overloaded', 'service unavailable'],
     },
     'adapter': {},
-    # 汉化副本启动方式（auto/ja/none）；见 gamelockit/launch.py。auto 会按引擎是否依赖系统代码页及启动是否秒退决定转区。
+    # 汉化副本启动方式（auto/ja/none）；见 gamelockit/launch.py。auto 会按本游戏是否依赖系统代码页及启动是否秒退决定转区；光盘版等只能在日文环境运行的游戏设 ja。
     'launch': {'locale': 'auto', 'locale_emulator': None},
 }
 
