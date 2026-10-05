@@ -31,6 +31,7 @@
 ```json
 "translator": {"command": ["claude", "-p", "{prompt}", "--allowedTools", "Read,Write,Bash"]}
 "translator": {"command": ["opencode", "run", "--pure", "--auto", "-m", "提供方/模型", "{prompt}"]}
+"translator": {"command": ["codex", "exec", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox", "-m", "模型名", "{prompt}"]}
 ```
 
 - 所选 Agent 自己的模型和登录要先配好（例如 opencode 默认模型的密钥无效时会直接报错）。
