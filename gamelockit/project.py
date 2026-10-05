@@ -9,12 +9,32 @@ from pathlib import Path
 
 CONFIG_NAME = 'glk.json'
 
+# 已在 Windows 上实测完成翻译的非交互写法；(命令, 指定模型所用参数)。codex/claude/opencode 的写法会跳过权限确认。
+AGENT_PRESETS = {
+    'pi': (['pi', '--no-session', '--no-skills', '--no-context-files', '--tools', 'read,bash,write', '--mode', 'json', '--print', '{prompt}'], '--model'),
+    # --allowedTools 接受多个值，提示词必须放在它前面，否则会被当成工具名吞掉
+    'claude': (['claude', '-p', '{prompt}', '--allowedTools', 'Read,Write,Bash'], '--model'),
+    'codex': (['codex', 'exec', '--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox', '{prompt}'], '-m'),
+    'opencode': (['opencode', 'run', '--pure', '--auto', '{prompt}'], '-m'),
+}
+
+
+def agent_command(agent, model=None):
+    if agent not in AGENT_PRESETS:
+        raise ValueError(f'未知翻译 Agent: {agent}（可选 {"/".join(AGENT_PRESETS)}）')
+    base, flag = AGENT_PRESETS[agent]
+    # 模型参数紧跟子命令之后，避开可变长参数
+    return base[:2] + ([flag, model] if model else []) + base[2:]
+
+
 DEFAULT_CONFIG = {
     'source_lang': 'ja',
     'target_lang': 'zh-Hans',
     'translator': {
-        # 子 Agent 命令模板；{prompt} 与 {worker} 会被替换。默认使用 pi 的无会话打印模式。
-        'command': ['pi', '--no-session', '--no-skills', '--no-context-files', '--tools', 'read,bash,write', '--mode', 'json', '--print', '{prompt}'],
+        # 子 Agent 命令模板；{prompt} 与 {worker} 会被替换。
+        'agent': 'pi',
+        'model': None,
+        'command': None,  # 由 agent 预设生成；也可写完整命令模板覆盖
         'slots': 5,
         'max_concurrency': 2,
         'batch': 300,

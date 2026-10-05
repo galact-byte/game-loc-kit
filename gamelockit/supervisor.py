@@ -14,7 +14,7 @@ import uuid
 from threading import BoundedSemaphore, Lock
 
 from . import catalog
-from .project import write_json
+from .project import agent_command, write_json
 
 
 def retry_delay(attempt):
@@ -44,7 +44,7 @@ class Supervisor:
         cfg = ws.config['translator']
         self.ws = ws
         self.prompt_for = prompt_for
-        self.command = cfg['command']
+        self.command = cfg['command'] or agent_command(cfg['agent'], cfg['model'])
         self.slots = int(cfg['slots'])
         self.batch = int(cfg['batch'])
         self.markers = cfg['transient_markers']

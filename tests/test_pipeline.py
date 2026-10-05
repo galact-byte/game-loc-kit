@@ -1,5 +1,8 @@
 """合成的 RPG Maker MV 小游戏走完整流程：init → extract → 审核/导入译文 → 门禁 → build。"""
 import json
+from pathlib import Path
+
+import pytest
 
 from gamelockit.cli import main
 
@@ -60,6 +63,35 @@ def test_init_locale_option_written(tmp_path, capsys):
     _game(game)
     _run(capsys, '--ws', str(ws), 'init', str(game), '--locale', 'ja')
     assert json.loads((ws / 'glk.json').read_text(encoding='utf-8'))['launch']['locale'] == 'ja'
+
+
+def test_init_agent_preset(tmp_path, capsys):
+    """换翻译 Agent 不应要求用户手写命令：init 选预设并可指定模型。"""
+    from gamelockit.project import Workspace
+    from gamelockit.supervisor import Supervisor
+    game = tmp_path / 'game'
+    _game(game)
+
+    def command(ws):
+        args = Supervisor(Workspace(ws), lambda w: 'PROMPT').args('w1')
+        return [Path(args[0]).stem.lower()] + args[1:]
+
+    for agent, model, head in [('claude', None, ['claude', '-p']), ('codex', 'm1', ['codex', 'exec']), ('opencode', 'p/m', ['opencode', 'run'])]:
+        ws = tmp_path / f'ws-{agent}'
+        _run(capsys, '--ws', str(ws), 'init', str(game), '--agent', agent, *(['--model', model] if model else []))
+        cmd = command(ws)
+        assert cmd[:2] == head and 'PROMPT' in cmd
+        assert (model in cmd) if model else ('--model' not in cmd and '-m' not in cmd)
+    claude = command(tmp_path / 'ws-claude')
+    assert claude.index('PROMPT') < claude.index('--allowedTools')
+    ws = tmp_path / 'ws-pi'
+    _run(capsys, '--ws', str(ws), 'init', str(game), '--model', 'x/y')
+    cmd = command(ws)
+    assert cmd[0] == 'pi' and cmd[cmd.index('--model') + 1] == 'x/y'
+    with pytest.raises(SystemExit):
+        main(['--ws', str(tmp_path / 'bad'), 'init', str(game), '--agent', 'nope'])
+    assert not (tmp_path / 'bad').exists()
+    capsys.readouterr()
 
 
 def test_kirikiri_codepage_detected_per_game(tmp_path):

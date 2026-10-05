@@ -22,20 +22,23 @@
 - 需要转区的游戏（光盘版/镜像里的日文原版本体、按 Shift-JIS 存剧本的老游戏等）：安装 [Locale Emulator](https://github.com/xupefei/Locale-Emulator)，并把 `LEProc.exe` 加入 PATH，或设置环境变量 `GLK_LOCALE_EMULATOR` 指向它
 - Wolf 加密包：需要 UberWolfCli.exe（加入 PATH 或设置 `GLK_UBERWOLF`）
 - Unity：游戏目录已装好 BepInEx + XUnity.AutoTranslator，或在配置中指定一份
-- 翻译：默认用本机的 `pi` 命令行启动翻译子 Agent；也可以换成其他能非交互运行、能读写文件和执行命令的 Agent（见下方“换用其他 Agent”）
+- 翻译：默认用本机的 `pi` 命令行启动翻译子 Agent；也可以换成其他能非交互运行、能读写文件和执行命令的 Agent（建工作区时用 `--agent` 选择，见下方“换用其他 Agent”）
 
 ## 换用其他 Agent
 
-在工作区的 `glk.json` 里改 `translator.command`，`{prompt}` 会被替换成任务说明。以下写法已在本机实测完成翻译：
+翻译默认交给本机的 `pi`。想换成别的 Agent，建工作区时加 `--agent`，需要指定模型再加 `--model`，不用手写命令：
 
-```json
-"translator": {"command": ["claude", "-p", "{prompt}", "--allowedTools", "Read,Write,Bash"]}
-"translator": {"command": ["opencode", "run", "--pure", "--auto", "-m", "提供方/模型", "{prompt}"]}
-"translator": {"command": ["codex", "exec", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox", "-m", "模型名", "{prompt}"]}
+```bat
+glk --ws E:/loc/某游戏 init "D:/Games/某游戏" --agent claude
+glk --ws E:/loc/某游戏 init "D:/Games/某游戏" --agent codex --model gpt-6.1-sol
+glk --ws E:/loc/某游戏 init "D:/Games/某游戏" --agent opencode --model opencode/big-pickle
 ```
 
-- 所选 Agent 自己的模型和登录要先配好（例如 opencode 默认模型的密钥无效时会直接报错）。
-- 上面几种写法都会跳过权限确认，子 Agent 可以在工作区里执行命令；只在你信任的环境里使用。
+- 可选 `pi`、`claude`、`codex`、`opencode`。前三个的预设已在本机实测完成翻译；opencode 的同等命令实测通过过，预设本身待复测。
+- 不写 `--model` 就用该 Agent 自己的默认模型；默认模型不可用（密钥无效、上游繁忙）时，换一个能用的模型。
+- 所选 Agent 要先装好、登录好，在命令行里能直接运行。
+- claude、codex、opencode 的预设会跳过权限确认，子 Agent 可以在工作区里执行命令；只在你信任的环境里使用。
+- 用的 Agent 不在列表里：在工作区 `glk.json` 的 `translator.command` 写完整命令，`{prompt}` 处会填入任务说明。
 - 成段对话量大时，直接调用大模型 API 比子 Agent 省时间和 token：用 `glk worker claim/submit` 领取和提交，格式校验同样生效。
 
 ## 使用流程

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import catalog, integrity, quality, saveguard
 from .adapters import detect, get
-from .project import Workspace, read_json, write_json
+from .project import AGENT_PRESETS, Workspace, agent_command, read_json, write_json
 from .release import make_release
 from .supervisor import Supervisor
 from .validate import check_target, compile_tokens
@@ -57,7 +57,11 @@ def cmd_init(args):
         if not found:
             raise SystemExit('无法识别引擎，请用 --engine 指定')
         engine = found[0][1]
-    ws = Workspace.create(args.ws, args.game, engine, source_lang=args.source_lang)
+    try:
+        agent_command(args.agent, args.model)
+    except ValueError as e:
+        raise SystemExit(str(e)) from None
+    ws = Workspace.create(args.ws, args.game, engine, source_lang=args.source_lang, translator={'agent': args.agent, 'model': args.model})
     if args.locale:
         ws.config['launch']['locale'] = args.locale
         ws.save()
@@ -250,6 +254,8 @@ def main(argv=None):
     s = sub.add_parser('init', help='创建工作区并记录原版清单')
     s.add_argument('game'); s.add_argument('--engine'); s.add_argument('--source-lang', default='ja')
     s.add_argument('--locale', choices=['auto', 'ja', 'none'], help='启动方式：ja=总是转区（光盘版等只能在日文环境运行的游戏）')
+    s.add_argument('--agent', default='pi', help=f'翻译子 Agent：{"/".join(AGENT_PRESETS)}（默认 pi）')
+    s.add_argument('--model', help='传给该 Agent 的模型名；不填用 Agent 自己的默认模型')
     s.set_defaults(fn=cmd_init)
     s = sub.add_parser('extract', help='解包并提取候选文字'); s.set_defaults(fn=cmd_extract)
     s = sub.add_parser('audit', help='用途审核：导出待审批次 / 应用审核结论')

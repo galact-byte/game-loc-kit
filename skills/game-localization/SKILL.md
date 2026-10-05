@@ -28,7 +28,7 @@ description: Use when localizing a PC game into Simplified Chinese with game-loc
 ### 1. 识别与建工作区
 ```
 glk detect <游戏目录>
-glk --ws <工作区> init <游戏目录> [--source-lang ja] [--locale ja]
+glk --ws <工作区> init <游戏目录> [--source-lang ja] [--locale ja] [--agent pi|claude|codex|opencode] [--model 模型]
 glk --ws <工作区> extract
 ```
 工作区放仓库外。光盘版/ISO 里的日文原版本体等只能在日文环境运行的游戏，`init` 时加 `--locale ja`；拿不准就先直接启动原版看是否报错、乱码或秒退。`extract` 输出各用途数量；`pending` 条目必须经过审核。
@@ -52,6 +52,8 @@ glk --ws <工作区> extract
 3. 端点与密钥从本机已有的 Agent/模型配置运行时读取，不写进工作区、脚本常量或回复；模型用项目 `AGENTS.md` 指定的那个。
 4. submit 是整份文件校验：被拒时拆成单条各重试一次，仍失败的留在该批租约里不动（换名后新批次不会重复领到它们）；队列领空后对用过的每个 worker 名运行 `worker release --worker <名>` 释放，交给 Agent。脚本不得放宽校验或原样提交原文。
 5. 并发、退避、限流规则同下；脚本只打印数量与错误类别，不打印原文译文。
+
+翻译子 Agent 在 `init --agent/--model` 选，不手写命令；预设之外的 Agent 才写 `glk.json` 的 `translator.command`。
 
 **Agent 复核与补漏**：
 - API 跑完后，用 `glk translate` 处理被释放的拒收条目（批量可调小）。
