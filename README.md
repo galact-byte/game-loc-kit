@@ -34,7 +34,7 @@ glk --ws E:/loc/某游戏 init "D:/Games/某游戏" --agent codex --model gpt-6.
 glk --ws E:/loc/某游戏 init "D:/Games/某游戏" --agent opencode --model opencode/big-pickle
 ```
 
-- 可选 `pi`、`claude`、`codex`、`opencode`。前三个的预设已在本机实测完成翻译；opencode 的同等命令实测通过过，预设本身待复测。
+- 可选 `pi`、`claude`、`codex`、`opencode`，四个预设都已在本机实测完成翻译。
 - 不写 `--model` 就用该 Agent 自己的默认模型；默认模型不可用（密钥无效、上游繁忙）时，换一个能用的模型。
 - 所选 Agent 要先装好、登录好，在命令行里能直接运行。
 - claude、codex、opencode 的预设会跳过权限确认，子 Agent 可以在工作区里执行命令；只在你信任的环境里使用。
