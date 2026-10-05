@@ -6,6 +6,7 @@
 """
 from concurrent.futures import ThreadPoolExecutor
 import json
+import shutil
 import os
 import subprocess
 import time
@@ -62,7 +63,10 @@ class Supervisor:
 
     def args(self, worker):
         prompt = self.prompt_for(worker)
-        return [part.replace('{prompt}', prompt).replace('{worker}', worker) for part in self.command]
+        args = [part.replace('{prompt}', prompt).replace('{worker}', worker) for part in self.command]
+        # npm 安装的 CLI 在 Windows 上是 .cmd 启动脚本，Popen 不按 PATHEXT 查找，需先解析成完整路径
+        args[0] = shutil.which(args[0]) or args[0]
+        return args
 
     def run_agent(self, worker, folder, log):
         while not self.stopped() and not self.limit.acquire(timeout=1):

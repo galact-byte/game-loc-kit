@@ -86,3 +86,23 @@ def test_piped_output_is_utf8():
     assert '多引擎游戏汉化工作流' in out.stdout.decode('utf-8')
     err = subprocess.run([sys.executable, '-m', 'gamelockit', 'status'], capture_output=True, env=env)
     assert '需要 --ws 工作区目录' in err.stderr.decode('utf-8')
+
+
+def test_supervisor_resolves_cmd_shims(tmp_path):
+    """Windows 上 pi/claude/codex 是 npm 生成的 .cmd 启动脚本，裸名直接 Popen 会找不到文件。"""
+    import subprocess
+    import sys
+    from gamelockit.supervisor import Supervisor
+    shim = tmp_path / 'fakeagent.cmd'
+    shim.write_text('@echo %1\r\n', encoding='ascii')
+    ws = type('W', (), {'config': {'translator': {'command': ['fakeagent', '{prompt}'], 'slots': 1, 'batch': 1,
+                                                  'max_concurrency': 1, 'transient_markers': []}}})()
+    import os
+    old = os.environ['PATH']
+    os.environ['PATH'] = f'{tmp_path}{os.pathsep}{old}'
+    try:
+        args = Supervisor(ws, lambda w: f'hello-{w}').args('w1')
+    finally:
+        os.environ['PATH'] = old
+    if sys.platform == 'win32':
+        assert subprocess.run(args, capture_output=True, text=True).stdout.strip() == 'hello-w1'

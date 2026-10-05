@@ -2,7 +2,7 @@
 
 把日文（或其他语言）的 PC 游戏做成**简体中文独立副本**的命令行工具。原版游戏和原版存档不会被改动；生成的中文版是一个单独的文件夹，可以和原版并排放着玩。
 
-> 翻译只用 AI（子 Agent），不调用机器翻译接口。
+> 翻译只用大模型（子 Agent 或直接调 API），不调用传统机器翻译接口。
 
 ## 支持的游戏引擎
 
@@ -22,7 +22,21 @@
 - 需要转区的游戏（光盘版/镜像里的日文原版本体、按 Shift-JIS 存剧本的老游戏等）：安装 [Locale Emulator](https://github.com/xupefei/Locale-Emulator)，并把 `LEProc.exe` 加入 PATH，或设置环境变量 `GLK_LOCALE_EMULATOR` 指向它
 - Wolf 加密包：需要 UberWolfCli.exe（加入 PATH 或设置 `GLK_UBERWOLF`）
 - Unity：游戏目录已装好 BepInEx + XUnity.AutoTranslator，或在配置中指定一份
-- 翻译：默认调用本机的 `pi` 命令行启动翻译子 Agent
+- 翻译：默认用本机的 `pi` 命令行启动翻译子 Agent；也可以换成其他能非交互运行、能读写文件和执行命令的 Agent（见下方“换用其他 Agent”）
+
+## 换用其他 Agent
+
+在工作区的 `glk.json` 里改 `translator.command`，`{prompt}` 会被替换成任务说明。claude、opencode 的写法已实测完成翻译；codex 的写法能正常启动，但测试时上游繁忙，没能跑完一批：
+
+```json
+"translator": {"command": ["claude", "-p", "{prompt}", "--allowedTools", "Read,Write,Bash"]}
+"translator": {"command": ["opencode", "run", "--auto", "-m", "提供方/模型", "{prompt}"]}
+"translator": {"command": ["codex", "exec", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox", "{prompt}"]}
+```
+
+- 所选 Agent 自己的模型和登录要先配好（例如 opencode 默认模型的密钥无效时会直接报错）。
+- 上面几种写法都会跳过权限确认，子 Agent 可以在工作区里执行命令；只在你信任的环境里使用。
+- 成段对话量大时，直接调用大模型 API 比子 Agent 省时间和 token：用 `glk worker claim/submit` 领取和提交，格式校验同样生效。
 
 ## 使用流程
 
