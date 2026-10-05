@@ -26,12 +26,11 @@
 
 ## 换用其他 Agent
 
-在工作区的 `glk.json` 里改 `translator.command`，`{prompt}` 会被替换成任务说明。claude、opencode 的写法已实测完成翻译；codex 的写法能正常启动，但测试时上游繁忙，没能跑完一批：
+在工作区的 `glk.json` 里改 `translator.command`，`{prompt}` 会被替换成任务说明。以下写法已在本机实测完成翻译：
 
 ```json
 "translator": {"command": ["claude", "-p", "{prompt}", "--allowedTools", "Read,Write,Bash"]}
 "translator": {"command": ["opencode", "run", "--auto", "-m", "提供方/模型", "{prompt}"]}
-"translator": {"command": ["codex", "exec", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox", "{prompt}"]}
 ```
 
 - 所选 Agent 自己的模型和登录要先配好（例如 opencode 默认模型的密钥无效时会直接报错）。
