@@ -239,6 +239,10 @@ def cmd_release(args):
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):
+        # 管道输出默认随系统代码页（中文系统为 GBK），读取方按 UTF-8 解码会乱码
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8')
     p = argparse.ArgumentParser(prog='glk', description='多引擎游戏汉化工作流')
     p.add_argument('--ws', help='工作区目录（init 之外的命令必填）')
     sub = p.add_subparsers(dest='cmd', required=True)

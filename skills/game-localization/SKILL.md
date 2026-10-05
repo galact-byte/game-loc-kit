@@ -7,6 +7,13 @@ description: Use when localizing a PC game into Simplified Chinese with game-loc
 
 用 `glk` 把一款游戏做成独立的简体中文副本。本 Skill 规定 Agent 的执行顺序与红线；命令细节见仓库 README，适配器细节见 docs/DEVELOPING.md。
 
+## 准备
+
+- 仓库：https://github.com/galact-byte/game-loc-kit。
+- 先运行 `glk --help` 确认可用；找不到时在仓库目录运行 `pip install -e .[all]`，或用 `python -m gamelockit` 代替 `glk`。
+- 转区需要 Locale Emulator：`LEProc.exe` 在 PATH、环境变量 `GLK_LOCALE_EMULATOR`，或工作区 `glk.json` 的 `launch.locale_emulator`。
+- 游戏项目自己的 `AGENTS.md`（账本位置、并发额度、验收标准）优先于本 Skill。
+
 ## 红线（任何阶段都适用）
 
 1. **对外防剧透**：进度与最终回复只报数字、阶段、问题类别；不展示人物名、地点、剧情、原文或译文。子 Agent 同样遵守。工作区文件可以含游戏内容，但不作为回复附件。

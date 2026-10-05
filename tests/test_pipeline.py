@@ -74,3 +74,15 @@ def test_kirikiri_codepage_detected_per_game(tmp_path):
         xp3.write(game / 'data.xp3', {'startup.tjs': b'\xff\xfe' + 'var a=1;'.encode('utf-16le'), 'scenario/first.ks': raw})
         results[label] = KirikiriAdapter(Workspace.create(tmp_path / f'ws-{label}', game, 'kirikiri')).legacy_codepage
     assert results == {'unicode': False, 'sjis': True}
+
+
+def test_piped_output_is_utf8():
+    """Agent 通过管道读取输出；不能随系统代码页（如 GBK）编码，否则中文乱码。"""
+    import os
+    import subprocess
+    import sys
+    env = {k: v for k, v in os.environ.items() if not k.startswith('PYTHONIO') and k != 'PYTHONUTF8'}
+    out = subprocess.run([sys.executable, '-m', 'gamelockit', '--help'], capture_output=True, env=env)
+    assert '多引擎游戏汉化工作流' in out.stdout.decode('utf-8')
+    err = subprocess.run([sys.executable, '-m', 'gamelockit', 'status'], capture_output=True, env=env)
+    assert '需要 --ws 工作区目录' in err.stderr.decode('utf-8')
