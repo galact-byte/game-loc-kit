@@ -7,7 +7,7 @@ name = "game-loc-kit"
 version = "0.1.0"
 description = "多引擎游戏汉化工作流：提取、用途审核、AI 子 Agent 翻译队列、显示层注入、质检门禁与发布"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "LicenseRef-Galact-Internal-Use-1.0" }
 dependencies = []
 
 [project.optional-dependencies]
@@ -17,6 +17,9 @@ all = ["pycryptodome>=3.18", "UnityPy>=1.10"]
 
 [project.scripts]
 glk = "gamelockit.cli:main"
+
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE", "licenses/*.txt"]
 
 [tool.setuptools.packages.find]
 include = ["gamelockit*"]
