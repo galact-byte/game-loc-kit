@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import shutil
 import os
+import signal
 import subprocess
 import time
 import uuid
@@ -68,7 +69,34 @@ class Supervisor:
         args[0] = shutil.which(args[0]) or args[0]
         return args
 
+    def wait_until_resumed(self, folder):
+        while self.ws.path('PAUSE').exists() and not self.stopped():
+            write_json(folder / 'status.json', {'state': 'paused'})
+            self.wait(.25)
+        return not self.stopped()
+
+    def stop_agent(self, child):
+        if child.poll() is not None:
+            return
+        if os.name == 'nt':
+            # npm 的 .cmd 和 Agent 都可能再启动子进程，单独 terminate 会留下后台任务。
+            subprocess.run(['taskkill', '/PID', str(child.pid), '/T', '/F'],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+        else:
+            os.killpg(child.pid, signal.SIGTERM)
+        try:
+            child.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            if os.name != 'nt':
+                os.killpg(child.pid, signal.SIGKILL)
+            else:
+                child.kill()
+            child.wait(timeout=5)
+
     def run_agent(self, worker, folder, log):
+        if not self.wait_until_resumed(folder):
+            return None
         while not self.stopped() and not self.limit.acquire(timeout=1):
             pass
         if self.stopped():
@@ -77,13 +105,14 @@ class Supervisor:
             env = {k: v for k, v in os.environ.items() if not k.startswith(('PEBREL_', 'PI_SESSION_'))}
             with log.open('w', encoding='utf-8') as out:
                 while True:
-                    if self.stopped():
+                    if not self.wait_until_resumed(folder):
                         return None
                     with self.lock:
                         remaining = self.cooldown_until - time.monotonic()
                         if remaining <= 0:
                             flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                            child = subprocess.Popen(self.args(worker), cwd=self.ws.root, env=env, stdout=out, stderr=subprocess.STDOUT, creationflags=flags)
+                            child = subprocess.Popen(self.args(worker), cwd=self.ws.root, env=env, stdout=out, stderr=subprocess.STDOUT,
+                                                     creationflags=flags, start_new_session=os.name != 'nt')
                             break
                     write_json(folder / 'status.json', {'state': 'global_cooldown', 'retry_seconds': round(remaining, 1)})
                     self.wait(min(remaining, 1))
@@ -91,13 +120,12 @@ class Supervisor:
                 try:
                     while child.poll() is None:
                         if self.stopped():
-                            child.terminate()
+                            self.stop_agent(child)
                             break
                         time.sleep(2)
                     return child.wait(timeout=30)
                 except BaseException:
-                    child.kill()
-                    child.wait()
+                    self.stop_agent(child)
                     raise
         finally:
             if log.exists() and log_has_marker(log, self.markers) and not self.stopped():
@@ -115,6 +143,8 @@ class Supervisor:
         folder.mkdir(parents=True, exist_ok=True)
         failures = 0
         while not self.stopped():
+            if not self.wait_until_resumed(folder):
+                break
             st = catalog.status(self.ws.db)
             if st['pending_translation'] == 0:
                 write_json(folder / 'status.json', {'state': 'complete'})
@@ -145,6 +175,7 @@ class Supervisor:
             if failures:
                 self.wait(10)
         catalog.release(self.ws.db, name)
+        write_json(folder / 'status.json', {'state': 'cancelled'})
 
     def _done(self, name):
         with catalog.connection(self.ws.db) as con:

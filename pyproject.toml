@@ -14,9 +14,13 @@ dependencies = []
 godot = ["pycryptodome>=3.18"]
 unity = ["UnityPy>=1.10"]
 all = ["pycryptodome>=3.18", "UnityPy>=1.10"]
+gui = ["PyQt6>=6.6"]
 
 [project.scripts]
 glk = "gamelockit.cli:main"
+
+[project.gui-scripts]
+glk-gui = "gamelockit.gui:main"
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE", "licenses/*.txt"]

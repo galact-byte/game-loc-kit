@@ -9,6 +9,7 @@ from pathlib import Path
 from . import catalog, integrity, quality, saveguard
 from .adapters import detect, get
 from .project import AGENT_PRESETS, Workspace, agent_command, read_json, write_json
+from .progress import COMMANDS, Task, record_result
 from .release import make_release
 from .supervisor import Supervisor
 from .validate import check_target, compile_tokens
@@ -19,6 +20,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 
 
 def emit(value):
+    record_result(value)
     sys.stdout.write(json.dumps(value, ensure_ascii=False, indent=1) + '\n')
 
 
@@ -242,13 +244,21 @@ def cmd_release(args):
     emit(make_release(ws, adapter, args.build, args.out, args.title, not args.no_original))
 
 
+def cmd_gui(args):
+    try:
+        from .gui import launch
+    except ImportError as exc:
+        raise RuntimeError('进度窗口需要 PyQt6，请使用已安装 PyQt6 的 Python，或安装 game-loc-kit[gui]') from exc
+    return launch(args.ws)
+
+
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         # 管道输出默认随系统代码页（中文系统为 GBK），读取方按 UTF-8 解码会乱码
         if hasattr(stream, 'reconfigure'):
             stream.reconfigure(encoding='utf-8')
     p = argparse.ArgumentParser(prog='glk', description='多引擎游戏汉化工作流')
-    p.add_argument('--ws', help='工作区目录（init 之外的命令必填）')
+    p.add_argument('--ws', help='工作区目录（detect、gui 可省略）')
     sub = p.add_subparsers(dest='cmd', required=True)
     s = sub.add_parser('detect', help='识别游戏引擎'); s.add_argument('game'); s.set_defaults(fn=cmd_detect)
     s = sub.add_parser('init', help='创建工作区并记录原版清单')
@@ -266,6 +276,7 @@ def main(argv=None):
     s = sub.add_parser('translate', help='启动翻译调度（子 Agent）'); s.set_defaults(fn=cmd_translate)
     s = sub.add_parser('import', help='导入已有用途结论与译文'); s.add_argument('file'); s.set_defaults(fn=cmd_import)
     s = sub.add_parser('status', help='进度'); s.set_defaults(fn=cmd_status)
+    s = sub.add_parser('gui', help='打开任务进度窗口（工作区可在窗口内选择）'); s.set_defaults(fn=cmd_gui)
     s = sub.add_parser('check', help='打包门禁检查'); s.add_argument('--deep', action='store_true'); s.set_defaults(fn=cmd_check)
     s = sub.add_parser('build', help='通过门禁后生成独立汉化副本')
     s.add_argument('--out'); s.add_argument('--no-probe', action='store_true')
@@ -283,12 +294,18 @@ def main(argv=None):
     if args.cmd == 'init':
         if not args.ws:
             p.error('init 需要 --ws')
-    elif args.cmd != 'detect' and not args.ws:
+    elif args.cmd not in ('detect', 'gui') and not args.ws:
         p.error('需要 --ws 工作区目录')
     for stream in (sys.stdout, sys.stderr):
         if stream.encoding and stream.encoding.lower() != 'utf-8':
             stream.reconfigure(encoding='utf-8')
     try:
+        if args.cmd in COMMANDS:
+            ws = Workspace(args.ws)
+            with Task(ws, args.cmd, getattr(args, 'out', None)) as task:
+                result = args.fn(args) or 0
+                task.finish(result, '操作未通过，请检查审核、译文格式、原版完整性与工作进程记录。' if result else None)
+                return result
         return args.fn(args) or 0
     except (ValueError, RuntimeError, OSError) as exc:
         # 预期内的失败（数据/环境问题）只给出原因；设置 GLK_DEBUG=1 可看完整堆栈

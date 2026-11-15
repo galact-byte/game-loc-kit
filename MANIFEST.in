@@ -1,0 +1,4 @@
+include LICENSE NOTICE README.md CHANGES.md
+include launch.py start-gui.bat
+recursive-include licenses *.txt
+recursive-include docs/releases *.md

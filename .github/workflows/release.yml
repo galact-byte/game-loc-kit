@@ -1,0 +1,151 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: '1'
+  QT_QPA_PLATFORM: offscreen
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+
+jobs:
+  build:
+    name: Windows test and package
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Check version and release notes
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import tomllib
+
+          version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+          tag = 'v' + version
+          if os.environ['GITHUB_REF_TYPE'] == 'tag' and os.environ['GITHUB_REF_NAME'] != tag:
+              raise SystemExit(f'Tag must match pyproject.toml: {tag}')
+          notes = Path('docs/releases') / (tag + '.md')
+          if not notes.is_file() or not notes.read_text(encoding='utf-8').strip():
+              raise SystemExit(f'Missing release notes: {notes}')
+      - name: Install build and test dependencies
+        run: python -m pip install ".[all,gui]" build wheel pytest ruff
+      - name: Lint
+        run: python -m ruff check .
+      - name: Test
+        run: python -m pytest -q --tb=short
+      - name: Build source distribution and wheel
+        run: python -m build --no-isolation
+      - name: Verify package contents and write checksums
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+          import tarfile
+          import zipfile
+
+          wheels = list(Path('dist').glob('*.whl'))
+          sources = list(Path('dist').glob('*.tar.gz'))
+          assert len(wheels) == len(sources) == 1, 'Expected one wheel and one source distribution'
+          with zipfile.ZipFile(wheels[0]) as wheel:
+              names = wheel.namelist()
+              for suffix in ('/LICENSE', '/NOTICE', '/LEGACY-MIT.txt'):
+                  assert any(n.endswith(suffix) for n in names), f'Missing {suffix}'
+              for name in ('gamelockit/gui.py', 'gamelockit/progress.py',
+                           'gamelockit/templates/worker_instructions.md',
+                           'gamelockit/templates/audit_instructions.md',
+                           'gamelockit/templates/ocr.ps1', 'gamelockit/templates/usage_zh.txt',
+                           'gamelockit/adapters/godot4/runtime/glk_display_translation.gd',
+                           'gamelockit/adapters/godot4/runtime/glk_locale.gd'):
+                  assert name in names, f'Missing {name}'
+              entry = wheel.read(next(n for n in names if n.endswith('/entry_points.txt'))).decode('utf-8')
+              assert 'glk = gamelockit.cli:main' in entry
+              assert 'glk-gui = gamelockit.gui:main' in entry
+          with tarfile.open(sources[0]) as source:
+              names = source.getnames()
+              for name in ('launch.py', 'start-gui.bat', 'LICENSE', 'NOTICE', 'licenses/LEGACY-MIT.txt'):
+                  assert any(n.endswith('/' + name) for n in names), f'Missing {name}'
+          files = sorted(wheels + sources)
+          checksums = ''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in files)
+          Path('dist/SHA256SUMS.txt').write_text(checksums, encoding='utf-8', newline='\n')
+          print(checksums)
+      - name: Install the built wheel
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          import sys
+          wheel = next(Path('dist').glob('*.whl'))
+          subprocess.run([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(wheel)], check=True)
+      - name: Smoke test installed CLI
+        working-directory: ${{ runner.temp }}
+        run: glk --help
+      - name: Smoke test installed GUI
+        working-directory: ${{ runner.temp }}
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import gamelockit.gui as gui
+          from PyQt6.QtCore import QTimer
+          from PyQt6.QtWidgets import QApplication
+
+          assert not Path(gui.__file__).resolve().is_relative_to(Path(os.environ['GITHUB_WORKSPACE']).resolve())
+          app = QApplication([])
+          window = gui.ProgressWindow()
+          window.show()
+          QTimer.singleShot(500, window.close)
+          QTimer.singleShot(600, app.quit)
+          raise SystemExit(app.exec())
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-packages
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-packages
+          path: dist
+      - name: Verify downloaded assets
+        working-directory: dist
+        run: sha256sum --check SHA256SUMS.txt
+      - name: Create release with reviewed notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/* \
+            --verify-tag \
+            --title "$RELEASE_TAG" \
+            --notes-file "docs/releases/$RELEASE_TAG.md"
