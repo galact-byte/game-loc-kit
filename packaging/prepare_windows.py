@@ -3,7 +3,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import sys
 import tarfile
@@ -34,15 +34,20 @@ def download(url, destination, expected=None):
 def copy_notices(archive, destination):
     """仅复制许可文本；不解包任意路径或执行归档中的文件。"""
     def save(name, data):
-        relative = Path(name.replace('\\', '/'))
-        if relative.is_absolute() or '..' in relative.parts:
+        relative = PurePosixPath(name.replace('\\', '/'))
+        if relative.is_absolute() or '..' in relative.parts or ':' in relative.parts[0]:
             raise ValueError(f'不安全的源码归档路径：{name}')
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
 
     def is_notice(name, size):
-        return size < 2 * 1024 * 1024 and any(word in Path(name).name.lower() for word in ('license', 'copying', 'notice'))
+        path = PurePosixPath(name.replace('\\', '/'))
+        return size < 2 * 1024 * 1024 and (
+            any(word in path.name.lower() for word in ('license', 'copying', 'notice'))
+            or any(part.lower() == 'licenses' for part in path.parts)
+            or path.name == 'qt_attribution.json'
+        )
 
     if zipfile.is_zipfile(archive):
         with zipfile.ZipFile(archive) as source:

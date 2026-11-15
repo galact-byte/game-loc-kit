@@ -25,10 +25,11 @@
 | 修改 | `docs/releases/v0.1.0.md` | 保留维护者正文，追加本次交付内容 |
 
 ### 验证
-- `python -m pytest -q --tb=short --basetemp=E:/DevData/glk-windows-tests`：44 项通过，包含冻结入口与缺失 CLI 检查。
+- `python -m pytest -q --tb=short --basetemp=E:/DevData/glk-windows-tests`：46 项通过，包含冻结入口、缺失 CLI、归档路径拒绝与 Qt SPDX 许可目录采集检查。
 - `python -m ruff check .`：通过；工作流内 Python 步骤语法检查通过。
 - 本地构建源码包，再从解压后的源码包构建 wheel：GPL 元数据、资源、Windows 构建脚本与许可文件检查通过。
 - 首次本地独立包在子进程 PATH 不含 Python 时，通过实际窗口按钮完成模拟 Agent 翻译、质量检查及副本构建；未改动原版夹具。
+- 远端试构建 `43687427367` 全绿：完成 Windows 测试、双 EXE 打包、依赖对应源码收集、独立 GUI 翻译冒烟和 wheel 安装验证。
 - 最终独立包与源码收集步骤的远端结果以对应 GitHub Actions 运行记录为准。
 
 ### 已知限制与后续

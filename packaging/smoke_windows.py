@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import struct
 import tempfile
 import time
 
@@ -16,6 +17,43 @@ def powershell(script, env):
     executable = Path(os.environ['SystemRoot']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
     return subprocess.run([str(executable), '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
                           env=env, capture_output=True, timeout=40, check=True)
+
+
+def capture_window(handle, destination):
+    """直接渲染目标窗口，避免桌面上其他窗口遮挡截图。"""
+    from PIL import Image
+    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
+    user32.SetProcessDPIAware()
+    user32.GetDC.restype = wintypes.HDC
+    gdi32.CreateCompatibleDC.argtypes = [wintypes.HDC]
+    gdi32.CreateCompatibleDC.restype = wintypes.HDC
+    gdi32.CreateDIBSection.argtypes = [wintypes.HDC, ctypes.c_void_p, wintypes.UINT,
+                                     ctypes.POINTER(ctypes.c_void_p), wintypes.HANDLE, wintypes.DWORD]
+    gdi32.CreateDIBSection.restype = wintypes.HANDLE
+    gdi32.SelectObject.argtypes = [wintypes.HDC, wintypes.HANDLE]
+    gdi32.SelectObject.restype = wintypes.HANDLE
+    gdi32.DeleteObject.argtypes = [wintypes.HANDLE]
+    gdi32.DeleteDC.argtypes = [wintypes.HDC]
+    user32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+    user32.PrintWindow.argtypes = [wintypes.HWND, wintypes.HDC, wintypes.UINT]
+    rectangle = wintypes.RECT()
+    assert user32.GetWindowRect(handle, ctypes.byref(rectangle))
+    width, height = rectangle.right - rectangle.left, rectangle.bottom - rectangle.top
+    header = ctypes.create_string_buffer(struct.pack('<IiiHHIIiiII', 40, width, -height, 1, 32, 0, 0, 0, 0, 0, 0))
+    bits = ctypes.c_void_p()
+    screen = user32.GetDC(handle)
+    memory = gdi32.CreateCompatibleDC(screen)
+    bitmap = gdi32.CreateDIBSection(screen, header, 0, ctypes.byref(bits), None, 0)
+    assert bitmap and memory and bits.value
+    previous = gdi32.SelectObject(memory, bitmap)
+    try:
+        assert user32.PrintWindow(handle, memory, 2), '无法渲染目标窗口'
+        Image.frombytes('RGB', (width, height), ctypes.string_at(bits, width * height * 4), 'raw', 'BGRX').save(destination)
+    finally:
+        gdi32.SelectObject(memory, previous)
+        gdi32.DeleteObject(bitmap)
+        gdi32.DeleteDC(memory)
+        user32.ReleaseDC(handle, screen)
 
 
 def smoke(bundle, screenshot=None):
@@ -113,11 +151,8 @@ throw 'The packaged GUI did not expose an enabled translation button'
             assert json.loads((output / 'www/data/System.json').read_text(encoding='utf-8'))['gameTitle'] == '中文'
             assert json.loads((data / 'System.json').read_text(encoding='utf-8'))['gameTitle'] == 'テスト'
             if screenshot:
-                from PIL import ImageGrab
                 time.sleep(1.2)
-                rectangle = wintypes.RECT()
-                assert ctypes.windll.user32.GetWindowRect(handle, ctypes.byref(rectangle))
-                ImageGrab.grab(bbox=(rectangle.left, rectangle.top, rectangle.right, rectangle.bottom)).save(screenshot)
+                capture_window(handle, screenshot)
             print('PASS: packaged CLI, GUI button, translation child, worker claim/submit, check and build; Python absent from child PATH')
         finally:
             if handle:
