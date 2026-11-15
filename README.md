@@ -26,9 +26,13 @@
 
 ## 下载发布版
 
-[GitHub Releases](https://github.com/galact-byte/game-loc-kit/releases) 提供 wheel、源码包和 `SHA256SUMS.txt` 校验文件。发布包需要 Python 3.10 以上，不内置 Python、Qt 或翻译模型。
+[GitHub Releases](https://github.com/galact-byte/game-loc-kit/releases) 提供 Windows x64 独立包、wheel、源码包及 `SHA256SUMS.txt` 校验文件。
 
-下载 wheel 后，在下载目录运行（将文件名替换为实际版本）：
+**Windows 用户**：下载 `game-loc-kit-0.1.0-windows-x64.zip`，完整解压到可写目录，双击 `glk-gui.exe`。无需安装 Python 或 PyQt6；同目录的 `glk.exe` 是给 AI 和命令行使用的入口。请保留 `_internal` 及其他随包文件，不能只复制一个 EXE。
+
+窗口打开后选择 AI 已建立的工作区。独立包不包含翻译模型或 Agent，也不包含游戏文件；翻译 Agent 和特定引擎的外部工具仍需另行准备。
+
+**已有 Python 环境**：wheel 和源码包需要 Python 3.10 以上。下载 wheel 后，在下载目录运行（将文件名替换为实际版本）：
 
 ```bat
 python -m pip install "game_loc_kit-0.1.0-py3-none-any.whl[all,gui]"
@@ -77,6 +81,8 @@ glk --ws E:/loc/某游戏 release --build E:/loc/某游戏/build/中文版 --out
 
 核心流程继续由 AI 调用 CLI 完成；用户可以另外打开窗口看进度、控制翻译，不必跟着读命令行。
 
+**Windows 独立包**：双击解压目录中的 `glk-gui.exe`，无需安装依赖。
+
 **直接使用源码**：双击本目录的 `start-gui.bat`，点击“选择工作区”，选择 AI 为这款游戏创建的、包含 `glk.json` 的文件夹。启动器使用当前 `python`，不会自动安装依赖。
 
 已经安装工具时，也可以运行：
@@ -123,14 +129,16 @@ glk --ws E:/loc/某游戏 gui
 
 版本号在 `pyproject.toml`，对应发布说明放在 `docs/releases/v版本号.md`。发布前先补齐本版本的功能、使用方法与已知限制。
 
-`.github/workflows/release.yml` 在推送 `v*` 标签时运行：Windows 测试和代码检查 → 构建源码包及 wheel → 检查资源与许可 → 从仓库外验证安装后的 CLI／GUI → 生成校验文件 → 创建 GitHub Release。标签必须与包版本一致，缺少发布说明或检查失败时不会发布。发布说明直接读取版本文件，不自动生成提交列表。
+`.github/workflows/release.yml` 在推送 `v*` 标签时运行：Windows 测试和代码检查 → 构建源码包、wheel 及双 EXE 独立包 → 检查资源、许可与源码说明 → 从仓库外验证安装后的 CLI／GUI → 在没有 Python PATH 的子进程中点击独立窗口并验证翻译和构建 → 生成校验文件 → 创建 GitHub Release。标签必须与包版本一致，缺少发布说明或检查失败时不会发布。发布说明直接读取版本文件，不自动生成提交列表。
+
+独立包的依赖版本固定在 `packaging/windows-requirements.txt`；构建入口是 `packaging/windows.spec`，`packaging/prepare_windows.py` 生成随包许可和源码说明。依赖版本变化时应重新检查对应源码地址与许可证。
 
 在 Actions 页面手动运行 `Release`、选择分支时，只构建供下载验证的工作流产物，不创建 Release。验证后再推送对应标签，例如 `git tag v0.1.0`、`git push origin v0.1.0`。同一版本不覆盖已发布资产，修订版应更新版本号和发布说明后发布新标签。
 
 ## 许可
 
-个人与公司可免费用于合法内部工作；免费分发须保留署名和许可并标识修改版。对外售卖、集成进收费产品或提供以软件功能为直接收费内容的服务，须另行取得书面商业授权。不含本工具代码的输出不因此受到软件许可限制。
+本项目采用 **GNU GPLv3（GPL-3.0-only）**。允许商用、修改及再分发；分发软件或修改版时，须遵守 GPLv3，保留适用许可与通知，并按要求提供对应源码。软件按现状提供，不提供担保。
 
-完整条款见 [LICENSE](LICENSE)，第三方例外和旧版 MIT 权利见 [NOTICE](NOTICE)。这是自定义源码可用许可，不是 MIT 或 OSI 开源许可；旧版已授予的 MIT 权利不会收回。商业授权请通过本官方仓库联系维护者。
+完整条款见 [LICENSE](LICENSE)，版权、历史许可与第三方例外见 [NOTICE](NOTICE)。此前已授予的旧版本许可权利继续有效。PyQt6、Qt 及其他依赖遵守各自许可证；Windows 包附带依赖许可、版本及源码获取说明。
 
 本工具不附带任何游戏内容；生成的汉化副本不代表官方汉化，原作版权归原权利人。允许使用工具不等于允许销售或分发游戏及译作。

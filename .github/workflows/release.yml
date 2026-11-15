@@ -21,7 +21,7 @@ jobs:
   build:
     name: Windows test and package
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,7 +46,7 @@ jobs:
           if not notes.is_file() or not notes.read_text(encoding='utf-8').strip():
               raise SystemExit(f'Missing release notes: {notes}')
       - name: Install build and test dependencies
-        run: python -m pip install ".[all,gui]" build wheel pytest "ruff==0.11.1"
+        run: python -m pip install -r packaging/windows-requirements.txt ".[all,gui]" build wheel pytest "ruff==0.11.1"
       - name: Lint
         run: |
           python -m ruff --version
@@ -55,6 +55,20 @@ jobs:
         run: python -m pytest -q --tb=short
       - name: Build source distribution and wheel
         run: python -m build
+      - name: Build Windows standalone applications
+        run: python -m PyInstaller --noconfirm --clean --distpath windows-dist --workpath windows-build packaging/windows.spec
+      - name: Collect dependency licenses and corresponding sources
+        run: python packaging/prepare_windows.py --bundle windows-dist/game-loc-kit --output dist
+      - name: Smoke test standalone GUI and translation without Python PATH
+        run: python packaging/smoke_windows.py --bundle windows-dist/game-loc-kit
+      - name: Archive Windows standalone package
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil
+          import tomllib
+          version = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+          shutil.make_archive(f'dist/game-loc-kit-{version}-windows-x64', 'zip', 'windows-dist', 'game-loc-kit')
       - name: Verify package contents and write checksums
         shell: python
         run: |
@@ -65,7 +79,12 @@ jobs:
 
           wheels = list(Path('dist').glob('*.whl'))
           sources = list(Path('dist').glob('*.tar.gz'))
-          assert len(wheels) == len(sources) == 1, 'Expected one wheel and one source distribution'
+          windows = list(Path('dist').glob('*-windows-x64.zip'))
+          dependency_sources = list(Path('dist').glob('*-dependency-sources.zip'))
+          assert len(wheels) == len(sources) == len(windows) == len(dependency_sources) == 1, 'Missing release package'
+          with zipfile.ZipFile(windows[0]) as bundle:
+              for name in ('glk.exe', 'glk-gui.exe', 'LICENSE', 'NOTICE', 'SOURCE_CODE.md', 'licenses/PYTHON-LICENSE.txt'):
+                  assert 'game-loc-kit/' + name in bundle.namelist(), f'Missing {name}'
           with zipfile.ZipFile(wheels[0]) as wheel:
               names = wheel.namelist()
               for suffix in ('/LICENSE', '/NOTICE', '/LEGACY-MIT.txt'):
@@ -82,9 +101,10 @@ jobs:
               assert 'glk-gui = gamelockit.gui:main' in entry
           with tarfile.open(sources[0]) as source:
               names = source.getnames()
-              for name in ('launch.py', 'start-gui.bat', 'LICENSE', 'NOTICE', 'licenses/LEGACY-MIT.txt'):
+              for name in ('launch.py', 'start-gui.bat', 'LICENSE', 'NOTICE', 'licenses/LEGACY-MIT.txt',
+                           'packaging/windows.spec', 'packaging/prepare_windows.py', 'packaging/windows-requirements.txt'):
                   assert any(n.endswith('/' + name) for n in names), f'Missing {name}'
-          files = sorted(wheels + sources)
+          files = sorted(p for p in Path('dist').iterdir() if p.is_file() and p.name != 'SHA256SUMS.txt')
           checksums = ''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in files)
           Path('dist/SHA256SUMS.txt').write_text(checksums, encoding='utf-8', newline='\n')
           print(checksums)
@@ -118,7 +138,7 @@ jobs:
           raise SystemExit(app.exec())
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: python-packages
+          name: release-packages
           path: dist/*
           if-no-files-found: error
           retention-days: 14
@@ -137,7 +157,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: python-packages
+          name: release-packages
           path: dist
       - name: Verify downloaded assets
         working-directory: dist

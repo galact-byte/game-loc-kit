@@ -1,5 +1,41 @@
 # 修改记录 — game-loc-kit
 
+## 2026-11-15 — Windows 独立包与 GPLv3 发布许可
+
+### 背景与目标
+- 保留 PyQt6 界面，为 Windows x64 提供无需安装 Python 的 ZIP；解压后双击 `glk-gui.exe`，同目录 `glk.exe` 供 AI 和命令行使用。
+- 经维护者确认，公开版采用 `GPL-3.0-only`，允许按 GPLv3 商用、修改和再分发；保留旧版本已授予的许可权利。
+
+### 影响与兼容性
+- 不更换 Qt 绑定，不迁移工作区和译文数据；源码与 wheel 仍可按原方式运行，CLI 必装依赖仍为空。
+- 统一源码和冻结程序的 CLI 路径解析，GUI 以及生成给 Agent 的指令使用同目录 EXE，不再要求用户安装 Python。
+- 独立包附 Python、Qt 及其他依赖许可、精确版本和源码获取说明；Release 额外提供依赖对应源码 ZIP，项目源码包包含 Windows 打包脚本。
+- 发布正文沿用维护者手改版本，仅追加 Windows 独立包与 GPLv3 说明。
+- 原 v0.1.0 Release 已由维护者删除，本次按其授权重建同版本并更新标签；以后修订仍使用新版本号和标签。
+
+### 文件与实现
+
+| 操作 | 路径 | 说明 |
+|---|---|---|
+| 新增 | `gamelockit/runtime.py`、`tests/test_runtime.py` | 源码与独立包启动路径及缺失 CLI 的回归检查 |
+| 修改 | `gamelockit/cli.py`、`gamelockit/gui.py` | Agent 指令与窗口启动使用统一命令 |
+| 新增 | `packaging/` | 双 EXE 构建、固定依赖、许可和源码收集、实际窗口按钮冒烟 |
+| 修改 | `.github/workflows/release.yml`、`MANIFEST.in` | 远端构建和验证 Windows 包，发布源码附件及校验文件 |
+| 修改 | `LICENSE`、`NOTICE`、`pyproject.toml`、`README.md` | GPLv3、历史权利、下载与重建说明 |
+| 修改 | `docs/releases/v0.1.0.md` | 保留维护者正文，追加本次交付内容 |
+
+### 验证
+- `python -m pytest -q --tb=short --basetemp=E:/DevData/glk-windows-tests`：44 项通过，包含冻结入口与缺失 CLI 检查。
+- `python -m ruff check .`：通过；工作流内 Python 步骤语法检查通过。
+- 本地构建源码包，再从解压后的源码包构建 wheel：GPL 元数据、资源、Windows 构建脚本与许可文件检查通过。
+- 首次本地独立包在子进程 PATH 不含 Python 时，通过实际窗口按钮完成模拟 Agent 翻译、质量检查及副本构建；未改动原版夹具。
+- 最终独立包与源码收集步骤的远端结果以对应 GitHub Actions 运行记录为准。
+
+### 已知限制与后续
+- 独立包不包含翻译 Agent、模型、游戏或引擎外部工具，使用者仍需配置相应环境。
+- 翻译链路使用模拟 Agent 与真实进程验证；没有调用付费模型完成整款游戏翻译。
+- Windows 包须完整解压，不能只移动一个 EXE；Qt 使用可替换的动态 DLL，依赖源码见同版本 Release。
+
 ## 2026-11-15 — GitHub Actions 构建与 Release
 
 ### 背景与目标

@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -11,6 +12,7 @@ from .adapters import detect, get
 from .project import AGENT_PRESETS, Workspace, agent_command, read_json, write_json
 from .progress import COMMANDS, Task, record_result
 from .release import make_release
+from .runtime import cli_command
 from .supervisor import Supervisor
 from .validate import check_target, compile_tokens
 
@@ -31,7 +33,8 @@ def load(args):
 
 
 def glk_command(ws):
-    return f'python -m gamelockit --ws "{ws.root.as_posix()}"'
+    args = cli_command('--ws', ws.root.as_posix())
+    return subprocess.list2cmdline([Path(args[0]).as_posix(), *args[1:]])
 
 
 def render_instructions(ws, adapter):

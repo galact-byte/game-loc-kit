@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from . import progress
 from .project import Workspace
+from .runtime import cli_command
 
 STATES = {'running': '处理中', 'pausing': '暂停中，等待当前批次完成', 'paused': '已暂停',
           'cancelling': '正在取消', 'cancelled': '已取消', 'complete': '已完成', 'failed': '失败，需要处理',
@@ -321,15 +322,13 @@ class ProgressWindow(QMainWindow):
     def start_translation(self):
         ws = Workspace(self.root)
         ws.path('work').mkdir(exist_ok=True)
-        executable = Path(sys.executable)
-        if executable.stem.lower() == 'pythonw':
-            executable = executable.with_name('python.exe')
+        command = cli_command('--ws', str(self.root), 'translate')
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(filter(None, [str(Path(__file__).resolve().parent.parent), env.get('PYTHONPATH')]))
         flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
         path = ws.path('work', f'gui-translate-{time.time_ns()}.log')
         with path.open('w', encoding='utf-8') as stream:
-            subprocess.Popen([str(executable), '-m', 'gamelockit', '--ws', str(self.root), 'translate'],
+            subprocess.Popen(command,
                              cwd=self.root, env=env, stdout=stream, stderr=subprocess.STDOUT, creationflags=flags)
         self.launching_until = time.monotonic() + 3
         self.resume_button.setEnabled(False)
