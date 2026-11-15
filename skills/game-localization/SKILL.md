@@ -5,7 +5,7 @@ description: Use when localizing a PC game into Simplified Chinese with game-loc
 
 # 游戏汉化工作流（game-loc-kit）
 
-用 `glk` 把一款游戏做成独立的简体中文副本。本 Skill 规定 Agent 的执行顺序与红线；命令细节见仓库 README，适配器细节见 docs/DEVELOPING.md。
+用 `glk` 把一款游戏做成独立的简体中文副本。本 Skill 规定 Agent 的执行顺序与红线；命令细节见仓库 docs/USAGE.md，适配器细节见 docs/DEVELOPING.md。
 
 ## 准备
 

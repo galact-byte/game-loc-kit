@@ -1,6 +1,6 @@
 # 开发者指南
 
-面向维护者与新引擎适配器作者。使用说明见根目录 README。
+面向维护者与新引擎适配器作者。项目介绍见 [README](../README.md)，操作说明见[使用指南](USAGE.md)。
 
 ## 结构
 
@@ -65,6 +65,40 @@ python tests/e2e_real.py <游戏目录> <工作区> --wait 25 [--pending-as disp
 
 输出 JSON 包含提取统计、构建摘要、启动探测、截图 OCR 与残留扫描、原版文件变动列表（必须为空）。
 `--pending-as display` 只用于显示层引擎的渲染覆盖自测，不代表真实审核结论。
+
+## 维护者发布
+
+### 版本与发布说明
+
+版本号在 `pyproject.toml`，对应发布说明放在 `docs/releases/v版本号.md`。发布前补齐本版本的功能、使用方法与已知限制，按用户实际可用的内容撰写，不以提交列表替代。
+
+`.github/workflows/release.yml` 在推送 `v*` 标签时运行。标签必须与包版本一致，缺少对应发布说明或检查失败时不会发布。发布正文直接读取仓库中的版本说明文件。
+
+在 Actions 页面手动运行发布工作流、选择分支时，只构建供下载验证的产物，不创建 Release。确认产物后再推送对应版本标签，例如 `git tag v0.1.0`、`git push origin v0.1.0`。修订版应更新版本号和发布说明后发布新标签，不覆盖已发布版本。
+
+### 构建与验证
+
+发布工作流按以下顺序执行：
+
+1. 在 Windows 上运行测试和代码检查。
+2. 构建项目源码包、wheel 及 GUI／CLI 双 EXE 独立包。
+3. 检查资源、许可证与源码获取说明。
+4. 从仓库外验证安装后的 CLI／GUI。
+5. 在移除 Python PATH 的子进程中操作独立窗口，验证翻译与构建流程。
+6. 生成校验清单，通过后创建 GitHub Release。
+
+独立包依赖固定在 `packaging/windows-requirements.txt`；构建入口为 `packaging/windows.spec`，`packaging/prepare_windows.py` 生成随包许可与源码说明。依赖版本变化时，应重新检查对应源码地址和许可证。CI 的 Ruff 版本也应保持为已验证的固定版本。
+
+### 发布附件
+
+Release 和手动构建产物仅上传以下四项：
+
+- Windows x64 独立包 ZIP。
+- 项目源码 tar.gz。
+- 依赖对应源码 ZIP。
+- `SHA256SUMS.txt`，仅列出上述三个下载包。
+
+wheel 仍用于安装验证，但不发布；`SOURCE_CODE.md` 保留在两个 ZIP 内，不单独发布。GitHub 自动附带的 `Source code` 下载项不受该工作流控制。
 
 ## 仓库卫生
 
