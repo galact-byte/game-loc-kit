@@ -1,5 +1,26 @@
 # 修改记录 — game-loc-kit
 
+## 2026-11-15 — 精简 Release 下载附件
+
+### 背景与目标
+- 发布附件调整为 Windows 独立包、项目源码包、依赖源码包和 `SHA256SUMS.txt`，不再单独上传 wheel 和 `SOURCE_CODE.md`。
+
+### 影响与兼容性
+- wheel 继续构建并用于安装验证；源码说明继续包含在 Windows 包和依赖源码包中。
+- 校验清单只记录实际发布的三个下载包；README 与版本说明同步更新。
+
+### 文件与实现
+- `.github/workflows/release.yml`：明确指定四个上传及发布附件，校验范围收窄到三个包。
+- `packaging/prepare_windows.py`：停止向输出目录单独复制源码说明，保留两个归档内的说明。
+- `README.md`、`docs/releases/v0.1.0.md`：移除 wheel 下载说明，保留源码安装方式。
+
+### 验证
+- 使用已发布的真实包执行工作流校验步骤：三个包哈希通过；即使输出目录仍有 wheel 和说明文件，上传及发布也仅选中四个附件；缺失项目源码包时拒绝继续。
+- 工作流所有内联 Python 步骤语法检查通过；`python -m pytest tests/test_packaging.py -q`：2 项通过；`python -m ruff check .`、`git diff --check` 通过。
+
+### 已知限制与后续
+- 当前 v0.1.0 的校验清单和正文已同步；回读确认四个自定义附件齐全，三个下载包的 GitHub SHA-256 与新清单一致，正文仅删除 wheel 的下载描述并保留原有排版。
+
 ## 2026-11-15 — Windows 独立包与 GPLv3 发布许可
 
 ### 背景与目标

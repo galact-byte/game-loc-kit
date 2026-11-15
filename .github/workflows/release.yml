@@ -104,7 +104,7 @@ jobs:
               for name in ('launch.py', 'start-gui.bat', 'LICENSE', 'NOTICE', 'licenses/LEGACY-MIT.txt',
                            'packaging/windows.spec', 'packaging/prepare_windows.py', 'packaging/windows-requirements.txt'):
                   assert any(n.endswith('/' + name) for n in names), f'Missing {name}'
-          files = sorted(p for p in Path('dist').iterdir() if p.is_file() and p.name != 'SHA256SUMS.txt')
+          files = sorted(sources + windows + dependency_sources)
           checksums = ''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in files)
           Path('dist/SHA256SUMS.txt').write_text(checksums, encoding='utf-8', newline='\n')
           print(checksums)
@@ -139,7 +139,11 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-packages
-          path: dist/*
+          path: |
+            dist/*-windows-x64.zip
+            dist/*.tar.gz
+            dist/*-dependency-sources.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -167,7 +171,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" dist/* \
+          gh release create "$RELEASE_TAG" \
+            dist/*-windows-x64.zip dist/*.tar.gz dist/*-dependency-sources.zip dist/SHA256SUMS.txt \
             --verify-tag \
             --title "$RELEASE_TAG" \
             --notes-file "docs/releases/$RELEASE_TAG.md"

@@ -142,7 +142,6 @@ PyQt6 的构建入口为 pyproject.toml（SIP 构建后端），Qt 模块使用�
         (bundle / 'SOURCE_CODE.md').write_text(notes, encoding='utf-8')
         (staging / 'SOURCE_CODE.md').write_text(notes, encoding='utf-8')
         shutil.copy2(root / 'LICENSE', staging / 'LICENSE')
-        shutil.copy2(bundle / 'SOURCE_CODE.md', output / 'SOURCE_CODE.md')
         with zipfile.ZipFile(output / source_name, 'w', compression=zipfile.ZIP_STORED) as target:
             for path in sorted(staging.iterdir()):
                 target.write(path, path.name)

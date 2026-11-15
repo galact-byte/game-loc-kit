@@ -26,20 +26,20 @@
 
 ## 下载发布版
 
-[GitHub Releases](https://github.com/galact-byte/game-loc-kit/releases) 提供 Windows x64 独立包、wheel、源码包及 `SHA256SUMS.txt` 校验文件。
+[GitHub Releases](https://github.com/galact-byte/game-loc-kit/releases) 提供 Windows x64 独立包、项目源码包、依赖源码包及 `SHA256SUMS.txt` 校验文件。日常使用只需下载 Windows 独立包；源码与重建说明已附在 Windows 包和依赖源码包中。
 
 **Windows 用户**：下载 `game-loc-kit-0.1.0-windows-x64.zip`，完整解压到可写目录，双击 `glk-gui.exe`。无需安装 Python 或 PyQt6；同目录的 `glk.exe` 是给 AI 和命令行使用的入口。请保留 `_internal` 及其他随包文件，不能只复制一个 EXE。
 
 窗口打开后选择 AI 已建立的工作区。独立包不包含翻译模型或 Agent，也不包含游戏文件；翻译 Agent 和特定引擎的外部工具仍需另行准备。
 
-**已有 Python 环境**：wheel 和源码包需要 Python 3.10 以上。下载 wheel 后，在下载目录运行（将文件名替换为实际版本）：
+**已有 Python 环境**：项目源码包需要 Python 3.10 以上。解压源码包后，在解压后的目录运行：
 
 ```bat
-python -m pip install "game_loc_kit-0.1.0-py3-none-any.whl[all,gui]"
+python -m pip install ".[all,gui]"
 glk-gui
 ```
 
-只用命令行可省略 `gui`；不需要 Unity／Godot 依赖时可省略 `all`。也可以解压源码包，在解压后的目录运行 `python -m pip install ".[all,gui]"`，再双击 `start-gui.bat`。
+只用命令行可省略 `gui`；不需要 Unity／Godot 依赖时可省略 `all`。安装后也可双击 `start-gui.bat` 启动窗口。
 
 ## 换用其他 Agent
 
@@ -132,6 +132,8 @@ glk --ws E:/loc/某游戏 gui
 `.github/workflows/release.yml` 在推送 `v*` 标签时运行：Windows 测试和代码检查 → 构建源码包、wheel 及双 EXE 独立包 → 检查资源、许可与源码说明 → 从仓库外验证安装后的 CLI／GUI → 在没有 Python PATH 的子进程中点击独立窗口并验证翻译和构建 → 生成校验文件 → 创建 GitHub Release。标签必须与包版本一致，缺少发布说明或检查失败时不会发布。发布说明直接读取版本文件，不自动生成提交列表。
 
 独立包的依赖版本固定在 `packaging/windows-requirements.txt`；构建入口是 `packaging/windows.spec`，`packaging/prepare_windows.py` 生成随包许可和源码说明。依赖版本变化时应重新检查对应源码地址与许可证。
+
+Release 和手动构建产物只上传 Windows 独立包、项目源码包、依赖源码包及校验清单；校验清单只列出这三个下载包。wheel 仍在构建过程中用于安装验证；`SOURCE_CODE.md` 保留在两个 ZIP 内，均不单独发布。GitHub 自动生成的 `Source code` 下载项不受工作流控制。
 
 在 Actions 页面手动运行 `Release`、选择分支时，只构建供下载验证的工作流产物，不创建 Release。验证后再推送对应标签，例如 `git tag v0.1.0`、`git push origin v0.1.0`。同一版本不覆盖已发布资产，修订版应更新版本号和发布说明后发布新标签。
 
